@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:ifl="http://www.sap.com/sap.ifl.metamodel/2.0" id="Definitions_1">
+    <bpmn2:collaboration id="Collaboration_1" name="Default Collaboration">
+        <bpmn2:extensionElements>
+            <ifl:property name="routeid" value="Blackline_to_S4HANA_Inbound"/>
+        </bpmn2:extensionElements>
+        <bpmn2:participant id="Participant_Sender" ifl:type="EndpointSender" name="Blackline">
+            <bpmn2:extensionElements>
+                <ifl:property name="endpointType" value="Sender"/>
+            </bpmn2:extensionElements>
+        </bpmn2:participant>
+        <bpmn2:participant id="Participant_Receiver" ifl:type="EndpointReceiver" name="S4HANA_OnPrem">
+            <bpmn2:extensionElements>
+                <ifl:property name="endpointType" value="Receiver"/>
+            </bpmn2:extensionElements>
+        </bpmn2:participant>
+        <bpmn2:participant id="Participant_Process" ifl:type="IntegrationProcess" name="Integration Process" processRef="Process_1"/>
+        <bpmn2:messageFlow id="MessageFlow_Sender" sourceRef="Participant_Sender" targetRef="StartEvent_1">
+            <bpmn2:extensionElements>
+                <ifl:property name="adapterType" value="HTTPS"/>
+                <ifl:property name="urlPath" value="/blackline/v1/inbound"/>
+                <ifl:property name="senderAuthType" value="RoleBased"/>
+                <ifl:property name="userRole" value="ESBMessaging.send"/>
+            </bpmn2:extensionElements>
+        </bpmn2:messageFlow>
+        <bpmn2:messageFlow id="MessageFlow_Receiver" sourceRef="EndEvent_1" targetRef="Participant_Receiver">
+            <bpmn2:extensionElements>
+                <ifl:property name="adapterType" value="HTTP"/>
+                <ifl:property name="httpAddressWithoutQuery" value="http://s4hana-virtual-host:8000/sap/bc/srt/rfc/sap/blackline_service"/>
+                <ifl:property name="httpMethod" value="POST"/>
+                <ifl:property name="proxyType" value="On-Premise"/>
+                <ifl:property name="authenticationMethod" value="Basic"/>
+                <ifl:property name="alias" value="S4_TECHNICAL_USER_ALIAS"/>
+            </bpmn2:extensionElements>
+        </bpmn2:messageFlow>
+    </bpmn2:collaboration>
+    <bpmn2:process id="Process_1" name="Integration Process">
+        <bpmn2:startEvent id="StartEvent_1" name="Start">
+            <bpmn2:outgoing>SequenceFlow_1</bpmn2:outgoing>
+        </bpmn2:startEvent>
+        <bpmn2:callActivity id="CallActivity_Mapping" name="Message Mapping Blackline to S4">
+            <bpmn2:incoming>SequenceFlow_1</bpmn2:incoming>
+            <bpmn2:outgoing>SequenceFlow_2</bpmn2:outgoing>
+        </bpmn2:callActivity>
+        <bpmn2:endEvent id="EndEvent_1" name="End">
+            <bpmn2:incoming>SequenceFlow_2</bpmn2:incoming>
+        </bpmn2:endEvent>
+        <bpmn2:sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="CallActivity_Mapping"/>
+        <bpmn2:sequenceFlow id="SequenceFlow_2" sourceRef="CallActivity_Mapping" targetRef="EndEvent_1"/>
+    </bpmn2:process>
+</bpmn2:definitions>
