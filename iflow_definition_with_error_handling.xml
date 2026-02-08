@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:ifl="http://www.sap.com/sap.ifl.metamodel/2.0" id="Definitions_1">
+    <bpmn2:collaboration id="Collaboration_1" name="Default Collaboration">
+        <bpmn2:participant id="Participant_Sender" ifl:type="EndpointSender" name="Blackline"/>
+        <bpmn2:participant id="Participant_Receiver" ifl:type="EndpointReceiver" name="S4HANA_OnPrem"/>
+        <bpmn2:participant id="Participant_Process" ifl:type="IntegrationProcess" name="Integration Process" processRef="Process_1"/>
+    </bpmn2:collaboration>
+    
+    <bpmn2:process id="Process_1" name="Integration Process">
+        <!-- Main Process Flow -->
+        <bpmn2:startEvent id="StartEvent_1" name="Start"/>
+        <bpmn2:callActivity id="CallActivity_Mapping" name="Mapping Blackline to S4"/>
+        <bpmn2:callActivity id="CallActivity_RequestS4" name="Request S/4HANA System"/>
+        <bpmn2:endEvent id="EndEvent_1" name="End (Success)"/>
+        
+        <!-- Error Handling Subprocess (Exception Subprocess) -->
+        <bpmn2:subProcess id="SubProcess_Exception" name="Exception Handling Subprocess" triggeredByEvent="true">
+            <bpmn2:startEvent id="StartEvent_Error" name="Error Start">
+                <bpmn2:errorEventDefinition id="ErrorEventDef_1"/>
+            </bpmn2:startEvent>
+            
+            <bpmn2:callActivity id="CallActivity_LogError" name="Log Error Details (Groovy Script)">
+                <bpmn2:extensionElements>
+                    <ifl:property name="script" value="import com.sap.gateway.ip.core.customdev.util.Message;
+import java.util.HashMap;
+def Message processData(Message message) {
+    def map = message.getProperties();
+    def exception = map.get('CamelExceptionCaught');
+    if (exception != null) {
+        def log = messageLogFactory.getMessageLog(message);
+        if (log != null) {
+            log.addAttachmentAsString('Error_Detail', exception.toString(), 'text/plain');
+            log.addAttachmentAsString('Payload_At_Error', message.getBody(java.lang.String.class), 'text/plain');
+        }
+    }
+    return message;
+}"/>
+                </bpmn2:extensionElements>
+            </bpmn2:callActivity>
+            
+            <bpmn2:callActivity id="CallActivity_FormatErrorResponse" name="Format Custom Error Response (JSON/XML)"/>
+            
+            <bpmn2:endEvent id="EndEvent_Error" name="End (Error Handled)"/>
+            
+            <bpmn2:sequenceFlow id="Flow_E1" sourceRef="StartEvent_Error" targetRef="CallActivity_LogError"/>
+            <bpmn2:sequenceFlow id="Flow_E2" sourceRef="CallActivity_LogError" targetRef="CallActivity_FormatErrorResponse"/>
+            <bpmn2:sequenceFlow id="Flow_E3" sourceRef="CallActivity_FormatErrorResponse" targetRef="EndEvent_Error"/>
+        </bpmn2:subProcess>
+
+        <bpmn2:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="CallActivity_Mapping"/>
+        <bpmn2:sequenceFlow id="Flow_2" sourceRef="CallActivity_Mapping" targetRef="CallActivity_RequestS4"/>
+        <bpmn2:sequenceFlow id="Flow_3" sourceRef="CallActivity_RequestS4" targetRef="EndEvent_1"/>
+    </bpmn2:process>
+</bpmn2:definitions>

@@ -35,6 +35,19 @@ sequenceDiagram
 - **Authentifizierung am S/4HANA:** Ja, das S/4HANA Framework (Blackline Connector/Web Service) benötigt eine eigene Authentifizierung. 
 - **Empfehlung:** Verwendung eines technischen Users (System User) im S/4HANA. Die IS reicht die Credentials (entweder via *Basic Authentication* im HTTP-Header oder via *Principal Propagation*) durch den Cloud Connector an S/4HANA weiter.
 
+## Monitoring & Error Handling
+### 1. Exception Subprocess
+Ein dedizierter **Exception Subprocess** fängt alle Laufzeitfehler ab. Dies stellt sicher, dass die Schnittstelle nicht einfach abbricht, sondern eine definierte Fehlermeldung zurückgibt.
+
+### 2. Professional Logging (Groovy Scripting)
+Anstatt nur den Standardfehler zu nutzen, wird ein Groovy-Skript eingesetzt, um:
+- Den exakten Stacktrace (`CamelExceptionCaught`) zu extrahieren.
+- Den aktuellen Payload zum Zeitpunkt des Fehlers als Attachment an das Message Processing Log (MPL) anzuhängen.
+- Benutzerdefinierte Status-Header zu setzen, um das Monitoring im Cloud Integration Cockpit zu vereinfachen.
+
+### 3. Custom Error Responses
+Blackline erhält im Fehlerfall keine generische 500er-Meldung, sondern ein strukturiertes XML/JSON-Feedback, das den Fehlercode und eine sprechende Beschreibung enthält.
+
 ## Konfigurations-Schritte
 1.  **S/4HANA:** Aktivierung der benötigten Web-Services (SOAP/REST) für das Blackline-Framework. Anlegen eines technischen Users mit den entsprechenden Berechtigungen.
 2.  **Cloud Connector:** 
